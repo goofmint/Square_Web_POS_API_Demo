@@ -14,36 +14,76 @@
 
   <script>
     var schema = 'https://moongift.s3.amazonaws.com/square_demo/index.html';
+    var client_id = 'sq0idp-CXMf_N4EyyjHL_rn9t2ehg';
+    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    var android = /android/i.test(userAgent);
+    var ios = (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream);
+    
     $(function() {
       if (location.search) {
-        var param = JSON.parse(decodeURIComponent(location.search.replace('?data=', '')));
-        $('#result').html(`
-          <ons-list-item>結果ID : ${param.status}</ons-list-item>
-          <ons-list-item>トランザクションID : ${param.transaction_id}</ons-list-item>
-          <ons-list-item>クライアントトランザクションID : ${param.client_transaction_id}</ons-list-item>
-        `);
+        if (android) {
+          var param = location.search.replace('?', '').split('=');
+          $('#result').html(`
+            <ons-list-item>クライアントトランザクションID : ${param[1]}</ons-list-item>
+          `);
+        }
+        if (ios) {
+          var param = JSON.parse(decodeURIComponent(location.search.replace('?data=', '')));
+          $('#result').html(`
+            <ons-list-item>結果ID : ${param.status}</ons-list-item>
+            <ons-list-item>トランザクションID : ${param.transaction_id}</ons-list-item>
+            <ons-list-item>クライアントトランザクションID : ${param.client_transaction_id}</ons-list-item>
+          `);
+        }
       }
     });
     
     ons.ready(function() {
       $('#square').on('click', function(e) {
         e.preventDefault();
-        var dataParameter = {
-          "amount_money": {
-            "amount" : "100",
-            "currency_code" : "JPY"
-          },
-          "callback_url" : schema, // Replace this value with your application's callback URL
-          "client_id" : "sq0idp-CXMf_N4EyyjHL_rn9t2ehg", // Replace this value with your application's ID
-          "version": "1.3",
-          "notes": "notes for the transaction",
-          "options" : {
-            "supported_tender_types" : ["CREDIT_CARD","CASH","OTHER","SQUARE_GIFT_CARD","CARD_ON_FILE"]
+        var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        if (android) {
+          var dataParameter = {
+            "action": "com.squareup.pos.action.CHARGE",
+            "S.com.squareup.pos.WEB_CALLBACK_URI": schema,
+            "S.com.squareup.pos.CLIENT_ID": client_id,
+            "S.com.squareup.pos.API_VERSION": 'v1.3',
+            "S.com.squareup.pos.CURRENCY_CODE": "JPY",
+            "i.com.squareup.pos.TOTAL_AMOUNT": "100",
+            "S.com.squareup.pos.TENDER_TYPES": [
+              "com.squareup.pos.TENDER_CARD",
+              "com.squareup.pos.TENDER_CARD_ON_FILE",
+              "com.squareup.pos.TENDER_CASH",
+              "com.squareup.pos.TENDER_OTHER"
+            ].join(","),
+            "package": "com.squareup",
+            "S.com.squareup.pos.NOTE": "notes for the transaction"
+          };
+          params = [];
+          for (var key in dataParameter) {
+            params.push(`${key}=${dataParameter[key]}`);
           }
-        };
-        var url = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(dataParameter));
-        // prompt("", url);
-        location.href = url;
+          var uri = "intent:#Intent;" + params.join(';') + ';end';
+          location.href = uri;
+        }
+        
+        if (ios) {
+          var dataParameter = {
+            "amount_money": {
+              "amount" : "100",
+              "currency_code" : "JPY"
+            },
+            "callback_url" : schema, // Replace this value with your application's callback URL
+            "client_id" : client_id, // Replace this value with your application's ID
+            "version": "1.3",
+            "notes": "notes for the transaction",
+            "options" : {
+              "supported_tender_types" : ["CREDIT_CARD","CASH","OTHER","SQUARE_GIFT_CARD","CARD_ON_FILE"]
+            }
+          };
+          var uri = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(dataParameter));
+          location.href = uri;
+        }
       });
     });
   </script>
